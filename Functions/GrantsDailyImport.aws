@@ -1,0 +1,136 @@
+﻿//========================================================================================================================================================================//
+// Description : AWS Lambda Function To Load DynamoDB Table With Grants
+// Date        : 11/2020
+// Environment : Test
+// Trigger     : Grants.gov XML File File Placed In S3 Bucket
+// Timeout     : 10 Secs
+// Memory      : 256MB
+// NodeJS      : V12.x
+//========================================================================================================================================================================//
+
+const AWS = require('aws-sdk');
+
+AWS.config.update({region: 'us-east-1'});
+
+// Set AWS References
+const s3 = new AWS.S3();
+const ddb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
+
+exports.handler = async (event) => {
+    const batchCount = 24;  // (25 Is DynamoDB The Limit For This Example)
+    const srcBucket  = 'S3 Bucket Name';
+    const srcKey     = 'Source Key';
+    const params     = {
+                        Bucket : srcBucket,
+                        Key    : srcKey
+ };
+
+const data = await s3.getObject(params).promise();
+
+let grantDetail = JSON.parse(data.Body.toString());
+
+var putRequests = [];
+
+// Load Opportunities
+grantDetail.Grants.OpportunitySynopsisDetail_1_0.map(grantEntry => {
+
+      var grantAwards = (grantEntry.ExpectedNumberOfAwards !== undefined) ? grantEntry.ExpectedNumberOfAwards : "0";
+      var additionaInformationURL = (grantEntry.AdditionalInformationURL != undefined) ? grantEntry.AdditionalInformationURL : "None";
+      var additionalInformationText = (grantEntry.AdditionalInformationText != undefined) ? grantEntry.AdditionalInformationText : "None";
+      var eligibleApplicants = (grantEntry.EligibleApplicants != undefined) ? grantEntry.EligibleApplicants : "0";
+      var awardCeiling = (grantEntry.AwardCeiling != undefined) ? grantEntry.AwardCeiling : "None";
+      var awardFloor = (grantEntry.AwardFloor != undefined) ? grantEntry.AwardFloor : "None";
+      var cFDANumbers = (grantEntry.CFDANumbers != undefined) ? grantEntry.CFDANumbers : "0";
+      var fundingInstrumentType = (grantEntry.FundingInstrumentType != undefined) ? grantEntry.FundingInstrumentType : "None"; 
+      var grantorContactEmail = (grantEntry.GrantorContactEmail != undefined) ? grantEntry.GrantorContactEmail : "None";
+      var grantorContactEmailDescription = (grantEntry.GrantorContactEmailDescription != undefined) ? grantEntry.GrantorContactEmailDescription : "None";
+      var grantorContactText = (grantEntry.GrantorContactText != undefined) ? grantEntry.GrantorContactText : "None";
+      var lastUpdatedDate = (grantEntry.LastUpdatedDate != undefined) ? grantEntry.LastUpdatedDate : "None";
+      var opportunityCategory = (grantEntry.OpportunityCategory != undefined) ? grantEntry.OpportunityCategory : "None";
+      var additionalInformationOnEligibility = (grantEntry.AdditionalInformationOnEligibility != undefined) ? grantEntry.AdditionalInformationOnEligibility : "None";
+      var agencyCode = (grantEntry.AgencyCode != undefined) ? grantEntry.AgencyCode : "None";
+      var agencyName = (grantEntry.AgencyName != undefined) ? grantEntry.AgencyName : "None";
+      var closeDate = (grantEntry.CloseDate != undefined) ? grantEntry.CloseDate : "None";
+      var description = (grantEntry.Description != undefined) ? grantEntry.Description : "None";
+      var version = (grantEntry.Version != undefined) ? grantEntry.Version : "None"; 
+      var costSharingOrMatchingRequirement = (grantEntry.CostSharingOrMatchingRequirement != undefined) ? grantEntry.CostSharingOrMatchingRequirement : "None";
+      var archiveDate = (grantEntry.ArchiveDate != undefined) ? grantEntry.ArchiveDate : "None";
+      var estimatedTotalProgramFunding = (grantEntry.EstimatedTotalProgramFunding != undefined) ? grantEntry.EstimatedTotalProgramFunding : "None";
+      var categoryOfFundingActivity = (grantEntry.CategoryOfFundingActivity != undefined) ? grantEntry.CategoryOfFundingActivity : "None";
+      var opportunityNumber = (grantEntry.OpportunityNumber != undefined) ? grantEntry.OpportunityNumber : "None";
+      var opportunityTitle = (grantEntry.OpportunityTitle != undefined) ? grantEntry.OpportunityTitle : "None";
+      var postDate = (grantEntry.PostDate != undefined) ? grantEntry.PostDate : "None";
+ 
+      putRequests.push({
+                        PutRequest: {
+                            Item: {
+                                    "OpportunityID"                      : { "S": grantEntry.OpportunityID },
+                                    "PostDate"                           : { "S": postDate },
+                                    "OpportunityTitle"                   : { "S": opportunityTitle },
+                                    "OpportunityNumber"                  : { "S": opportunityNumber },
+                                    "OpportunityCategory"                : { "S": opportunityCategory },
+                                    "FundingInstrumentType"              : { "S": "[" + fundingInstrumentType + "]"},
+                                    "CategoryOfFundingActivity"          : { "S": "[" + categoryOfFundingActivity + "]"},
+                                    "CFDANumbers"                        : { "S": "[" + cFDANumbers + "]"},
+                                    "EligibleApplicants"                 : { "S": "[" + eligibleApplicants + "]"},
+                                    "AdditionalInformationOnEligibility" : { "S": additionalInformationOnEligibility },
+                                    "AgencyCode"                         : { "S": agencyCode },
+                                    "AgencyName"                         : { "S": agencyName },
+                                    "CloseDate"                          : { "S": closeDate },
+                                    "LastUpdatedDate"                    : { "S": lastUpdatedDate },
+                                    "AwardCeiling"                       : { "S": awardCeiling },
+                                    "AwardFloor"                         : { "S": awardFloor },
+                                    "EstimatedTotalProgramFunding"       : { "S": estimatedTotalProgramFunding },
+                                    "ExpectedNumberOfAwards"             : { "S": grantAwards },
+                                    "Description"                        : { "S": description },
+                                    "Version"                            : { "S": version },
+                                    "CostSharingOrMatchingRequirement"   : { "S": costSharingOrMatchingRequirement },
+                                    "ArchiveDate"                        : { "S": archiveDate },
+                                    "AdditionalInformationURL"           : { "S": additionaInformationURL },
+                                    "AdditionalInformationText"          : { "S": additionalInformationText },
+                                    "GrantorContactEmail"                : { "S": grantorContactEmail },
+                                    "GrantorContactEmailDescription"     : { "S": grantorContactEmailDescription },
+                                    "GrantorContactText"                 : { "S": grantorContactText }
+                                  }
+                        }
+                     }); 
+
+});
+
+console.log("Put Request Length ; " + putRequests.length.toString());
+
+var dbRequests = []; 
+
+// Store In DynamoDB By Batch Count
+for (var i = 0; i <= (putRequests.length - 1) ; i++) {
+    var currentCount = dbRequests.push(putRequests[i]);
+    if (currentCount === batchCount) {
+        var dbRequestParms = {
+                                  RequestItems: {
+                                      "FederalGrants": dbRequests
+                                  }
+                             };
+        var result = await ddb.batchWriteItem(dbRequestParms).promise();
+        dbRequests = [];
+    }
+}
+
+// Store In DynamoDB Remaining Request After Loop
+// TODO: Convert BatchWriteItem Functionality To Common Code
+if (dbRequests.length !== 0)
+{
+        var dbRequestParms = {
+                                  RequestItems: {
+                                                  "FederalGrants": dbRequests
+                                  }
+                             };
+        var result = await ddb.batchWriteItem(dbRequestParms).promise();
+        dbRequests = [];
+}
+
+const response = {
+        statusCode: 200,
+        body: JSON.stringify('Bucket Name : '  + srcBucket) 
+    };
+    return response;
+};
